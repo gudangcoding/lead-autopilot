@@ -2,6 +2,9 @@
 
 # Lead Autopilot
 
+
+Dibuat dengan [OpenCode](https://opencode.ai) · Instruktur Digital Marketing [https://lkpnaura.com](https://lkpnaura.com)
+
 Aplikasi internal untuk otomatisasi lead generation dan outreach B2B. Fokus 2 jasa:
 
 - **Building Management**: aplikasi manajemen gedung/apartemen/P3SRS/PPPSRS. Target kontak: Pengadaan/Bendahara/GA. Cakupan nasional.

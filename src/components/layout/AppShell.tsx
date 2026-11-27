@@ -19,6 +19,9 @@ export function AppShell({ children, title, subtitle }: { children: React.ReactN
           </div>
         </header>
         <main className="p-6 lg:p-8">{children}</main>
+        <footer className="px-6 lg:px-8 pb-6 text-xs text-gray-500">
+          Dibuat dengan <a className="text-brand-600 hover:underline" href="https://opencode.ai" target="_blank" rel="noreferrer">OpenCode</a> · Instruktur Digital Marketing <a className="text-brand-600 hover:underline" href="https://lkpnaura.com" target="_blank" rel="noreferrer">https://lkpnaura.com</a>
+        </footer>
       </div>
     </div>
   );

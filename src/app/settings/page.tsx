@@ -10,6 +10,7 @@ type Imap = { host:string; port:number; secure:boolean; user:string; pass:string
 type MAI = { autoReplyEmail:boolean; autoReplyWa:boolean; followupHours:number; maxRepliesPerLead:number; systemPrompt:string };
 type User = { email:string; name:string };
 type Svc = { slug:string; name:string; description?:string; target_role?:string; default_query?:string; active?:number|boolean };
+type Discover = { serpApiKey:string; hasKey?:boolean; provider?:string };
 
 export default function SettingsPage() {
   const [smtp,setSmtp]=useState<Smtp>({host:"",port:587,secure:false,user:"",pass:"",from:""});
@@ -20,13 +21,14 @@ export default function SettingsPage() {
   const [user,setUser]=useState<User>({email:"",name:""});
   const [services,setServices]=useState<Svc[]>([]);
   const [newSvc,setNewSvc]=useState({name:"",target_role:"",default_query:""});
+  const [discover,setDiscover]=useState<Discover>({serpApiKey:""});
   const [pw,setPw]=useState({currentPassword:"",newPassword:""});
   const [msg,setMsg]=useState(""); const [busy,setBusy]=useState("");
   const [waStatus,setWaStatus]=useState<any>(null);
 
   async function load(){
     const [s,u,sv]=await Promise.all([fetch("/api/settings").then(r=>r.json()), fetch("/api/auth/me").then(r=>r.json()).catch(()=>({})), fetch("/api/services").then(r=>r.json()).catch(()=>({services:[]}))]);
-    if(s.smtp) setSmtp(s.smtp); if(s.ai) setAi(s.ai); if(s.wa_blast) setWa(s.wa_blast); if(s.imap) setImap(s.imap); if(s.marketing_ai) setMai(s.marketing_ai);
+    if(s.smtp) setSmtp(s.smtp); if(s.ai) setAi(s.ai); if(s.wa_blast) setWa(s.wa_blast); if(s.imap) setImap(s.imap); if(s.marketing_ai) setMai(s.marketing_ai); if(s.discover) setDiscover(s.discover);
     if(u.user) setUser(u.user);
     if(sv.services) setServices(sv.services);
   }
@@ -109,6 +111,15 @@ export default function SettingsPage() {
           <div><L c="System prompt"/><textarea value={mai.systemPrompt} onChange={(e:any)=>setMai({...mai,systemPrompt:e.target.value})} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm min-h-[96px]"/></div>
         </div>
         <div className="mt-4"><B onClick={()=>save("marketing_ai",mai)}>Simpan Marketing AI</B></div>
+      </Card>
+
+      <Card>
+        <CardTitle>Lead Discovery (SerpAPI)</CardTitle>
+        <div className="mt-4 space-y-3">
+          <div><L c="SerpAPI Key"/><I type="password" value={discover.serpApiKey} onChange={(e:any)=>setDiscover({...discover,serpApiKey:e.target.value})} placeholder={discover.hasKey?"(tersimpan)":""}/></div>
+          <p className="text-xs text-gray-500">Dipakai untuk Auto Discover Google Maps. Jika kosong, gunakan Import CSV/XLSX.</p>
+          <div><B onClick={()=>save("discover",discover)}>Simpan Discovery</B></div>
+        </div>
       </Card>
 
       <Card>

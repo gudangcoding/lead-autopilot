@@ -1,4 +1,5 @@
 import type { LeadInput } from "./types";
+import { getDiscoverConfig } from "./settings";
 
 export interface DiscoverProvider {
   discover(query: string, limit: number, serviceType: string): Promise<LeadInput[]>;
@@ -39,13 +40,14 @@ function extractCity(addr?: string) {
   return parts.length >= 2 ? parts[parts.length - 2] : parts[0];
 }
 
-export function getDiscoverProvider(): DiscoverProvider {
-  const key = process.env.SERPAPI_KEY;
+export async function getDiscoverProvider(): Promise<DiscoverProvider> {
+  const cfg = await getDiscoverConfig();
+  const key = cfg.serpApiKey;
   if (key) return new SerpApiProvider(key);
-  throw new Error("No discover provider configured. Set SERPAPI_KEY for Google Maps discovery, or import CSV/XLSX.");
+  throw new Error("Discover belum dikonfigurasi. Isi SERPAPI_KEY di Settings > Lead Discovery / .env.local, atau import lead via CSV/XLSX.");
 }
 
 export async function discoverLeads(serviceType: string, query: string, limit = 10) {
-  const provider = getDiscoverProvider();
+  const provider = await getDiscoverProvider();
   return provider.discover(query, limit, serviceType);
 }

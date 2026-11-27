@@ -1,6 +1,6 @@
 import { getPool } from "./db";
 
-export type SettingKey = "smtp" | "ai" | "wa_blast" | "imap" | "marketing_ai";
+export type SettingKey = "smtp" | "ai" | "wa_blast" | "imap" | "marketing_ai" | "discover";
 
 const DEFAULTS: Record<SettingKey, any> = {
   smtp: { host: "", port: 587, secure: false, user: "", pass: "", from: "" },
@@ -8,6 +8,7 @@ const DEFAULTS: Record<SettingKey, any> = {
   wa_blast: { dryRun: true, dailyLimit: 10, workerUrl: "http://127.0.0.1:3011", messageDelayMs: 3000 },
   imap: { host: "", port: 993, secure: true, user: "", pass: "", mailbox: "INBOX", pollIntervalSec: 60, enabled: false },
   marketing_ai: { autoReplyEmail: false, autoReplyWa: false, followupHours: 48, maxRepliesPerLead: 5, systemPrompt: "Kamu adalah asisten marketing profesional Indonesia. Balas singkat, sopan, membantu, dan fokus pada penjadwalan meeting/demo. Jangan mengarang fakta." },
+  discover: { serpApiKey: "", provider: "serpapi" },
 };
 
 export async function getSetting<T = any>(key: SettingKey): Promise<T> {
@@ -88,4 +89,13 @@ export async function getImapConfig() {
 
 export async function getMarketingAiConfig() {
   return getSetting<any>("marketing_ai");
+}
+
+
+export async function getDiscoverConfig() {
+  const db = await getSetting<any>("discover");
+  return {
+    serpApiKey: db.serpApiKey || process.env.SERPAPI_KEY || "",
+    provider: db.provider || "serpapi",
+  };
 }

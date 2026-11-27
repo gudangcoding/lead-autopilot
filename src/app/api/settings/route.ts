@@ -1,17 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getSmtpConfig, getAiConfig, getWaConfig, getImapConfig, getMarketingAiConfig, setSetting, maskSecret } from "@/lib/settings";
+import { getSmtpConfig, getAiConfig, getWaConfig, getImapConfig, getMarketingAiConfig, getDiscoverConfig, setSetting, maskSecret } from "@/lib/settings";
 
 export async function GET() {
   const session = await getSession();
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-  const [smtp, ai, wa, imap, mai] = await Promise.all([getSmtpConfig(), getAiConfig(), getWaConfig(), getImapConfig(), getMarketingAiConfig()]);
+  const [smtp, ai, wa, imap, mai, discover] = await Promise.all([getSmtpConfig(), getAiConfig(), getWaConfig(), getImapConfig(), getMarketingAiConfig(), getDiscoverConfig()]);
   return NextResponse.json({
     smtp: { ...smtp, pass: maskSecret(smtp.pass), hasPass: !!smtp.pass },
     ai: { ...ai, apiKey: maskSecret(ai.apiKey), hasApiKey: !!ai.apiKey },
     wa_blast: wa,
     imap: { ...imap, pass: maskSecret(imap.pass), hasPass: !!imap.pass },
     marketing_ai: mai,
+    discover: { ...discover, serpApiKey: maskSecret(discover.serpApiKey), hasKey: !!discover.serpApiKey },
   });
 }
 
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
   if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   const body = await req.json().catch(() => ({}));
   const key = String(body.key || "");
-  if (!["smtp", "ai", "wa_blast", "imap", "marketing_ai"].includes(key)) return NextResponse.json({ error: "invalid key" }, { status: 400 });
+  if (!["smtp", "ai", "wa_blast", "imap", "marketing_ai", "discover"].includes(key)) return NextResponse.json({ error: "invalid key" }, { status: 400 });
 
   if (key === "smtp") {
     const cur = await getSmtpConfig();
@@ -51,6 +52,11 @@ export async function POST(req: NextRequest) {
   }
   if (key === "marketing_ai") {
     await setSetting("marketing_ai", { autoReplyEmail: !!body.autoReplyEmail, autoReplyWa: !!body.autoReplyWa, followupHours: Math.max(1, Number(body.followupHours||48)), maxRepliesPerLead: Math.max(1, Number(body.maxRepliesPerLead||5)), systemPrompt: String(body.systemPrompt||"") });
+  }
+  if (key === "discover") {
+    const cur = await getDiscoverConfig();
+    const serpApiKey = body.serpApiKey && !String(body.serpApiKey).includes("***") ? String(body.serpApiKey) : cur.serpApiKey;
+    await setSetting("discover", { serpApiKey, provider: "serpapi" });
   }
   return NextResponse.json({ ok: true });
 }
