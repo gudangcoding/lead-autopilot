@@ -41,7 +41,7 @@ export async function autoReplyIfEnabled(inboxId: number) {
   if (!enabled) return { skipped: "disabled" };
 
   const [leadRows]: any = msg.lead_id ? await pool.query("SELECT * FROM leads WHERE id=? LIMIT 1", [msg.lead_id]) : [[]];
-  const lead = leadRows[0] || { company_name: msg.from_addr, contact_role: "Prospek", service_type: "building_management", city: "" };
+  const lead = leadRows[0] || { company_name: msg.from_addr, contact_role: "Prospek", service_type: "general", city: "" };
   const [hist]: any = await pool.query("SELECT direction,body FROM inbox_messages WHERE (lead_id<=>? OR from_addr=?) AND channel=? ORDER BY id DESC LIMIT 6", [msg.lead_id, msg.from_addr, msg.channel]);
   const reply = await generateReply({ lead, inbound: msg.body || "", history: hist.reverse() });
 

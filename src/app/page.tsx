@@ -6,18 +6,23 @@ import { Card, CardTitle } from "@/components/ui/Card";
 import { Building2, GraduationCap, Send, MessageSquare, Mail, Search } from "lucide-react";
 
 type Lead = { id:number; service_type:string; company_name:string; contact_role?:string; city?:string; whatsapp?:string; email?:string; status:string };
+type Svc = { slug:string; name:string; active?:number|boolean };
 
 export default function Page() {
   const [file, setFile] = useState<File|null>(null);
-  const [service, setService] = useState("building_management");
+  const [services, setServices] = useState<Svc[]>([]);
+  const [service, setService] = useState("");
+  const [newSvc, setNewSvc] = useState("");
   const [msg, setMsg] = useState("");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [wa, setWa] = useState<any>(null);
   const [busy, setBusy] = useState(false);
 
   async function refresh() {
-    const [l, w] = await Promise.all([fetch("/api/leads").then(r=>r.json()).catch(()=>({leads:[]})), fetch("/api/whatsapp/status").then(r=>r.json()).catch(()=>null)]);
+    const [l, w, sv] = await Promise.all([fetch("/api/leads").then(r=>r.json()).catch(()=>({leads:[]})), fetch("/api/whatsapp/status").then(r=>r.json()).catch(()=>null), fetch("/api/services").then(r=>r.json()).catch(()=>({services:[]}))]);
     setLeads(l.leads||[]); setWa(w);
+    const svcs = (sv.services||[]).filter((x:any)=>x.active!==0 && x.active!==false);
+    setServices(svcs); if(!service && svcs[0]) setService(svcs[0].slug);
   }
   useEffect(()=>{ refresh(); }, []);
 
@@ -38,14 +43,12 @@ export default function Page() {
     setMsg(JSON.stringify(j,null,2)); setBusy(false); refresh();
   }
 
-  const bm = leads.filter(l=>l.service_type==="building_management").length;
-  const tr = leads.filter(l=>l.service_type==="office_training").length;
   const sent = leads.filter(l=>String(l.status).startsWith("sent")).length;
+  const svcStats = services.slice(0,2).map(s=>({name:s.name, count: leads.filter(l=>l.service_type===s.slug).length}));
 
-  return <AppShell title="Dashboard" subtitle="Otomasi cari lead & kirim outreach 10/hari per jasa">
+  return <AppShell title="Dashboard" subtitle="Otomasi cari lead & kirim outreach harian per jasa">
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4 mb-6">
-      <Stat icon={<Building2 className="text-brand-500"/>} label="Building Mgmt Leads" value={bm} />
-      <Stat icon={<GraduationCap className="text-brand-500"/>} label="Training Leads" value={tr} />
+      {svcStats.map((s,i)=><Stat key={s.name} icon={i===0?<Building2 className="text-brand-500"/>:<GraduationCap className="text-brand-500"/>} label={s.name} value={s.count} />)}
       <Stat icon={<Send className="text-brand-500"/>} label="Sent/Processed" value={sent} />
       <Stat icon={<MessageSquare className={wa?.ready?"text-success-500":"text-warning-500"}/>} label="WhatsApp" value={wa?.ready?"Ready":"Not Ready"} />
     </div>
@@ -58,9 +61,9 @@ export default function Page() {
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">Jasa</label>
             <select value={service} onChange={e=>setService(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm">
-              <option value="building_management">Building Management / P3SRS</option>
-              <option value="office_training">Training MS Office/Excel</option>
+              {services.map(s=><option key={s.slug} value={s.slug}>{s.name}</option>)}
             </select>
+            <div className="mt-2 flex gap-2"><input value={newSvc} onChange={e=>setNewSvc(e.target.value)} placeholder="Tambah jasa custom..." className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"/><button onClick={async()=>{if(!newSvc.trim())return; setBusy(true); await fetch('/api/services',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:newSvc.trim()})}); setNewSvc(''); await refresh(); setBusy(false);}} className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium">Tambah</button></div>
           </div>
           <div className="flex items-end">
             <button disabled={busy} onClick={discover} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"><Search size={16}/>Auto Discover 10</button>
@@ -96,7 +99,7 @@ export default function Page() {
           <thead><tr className="border-b border-gray-100 text-left text-gray-500"><th className="py-3 pr-3 font-medium">Company</th><th className="py-3 pr-3 font-medium">Service</th><th className="py-3 pr-3 font-medium">Target</th><th className="py-3 pr-3 font-medium">Contact</th><th className="py-3 font-medium">Status</th></tr></thead>
           <tbody>{leads.slice(0,20).map(l=><tr key={l.id} className="border-b border-gray-50">
             <td className="py-3 pr-3"><div className="font-medium text-gray-900">{l.company_name}</div><div className="text-xs text-gray-500">{l.city||"-"}</div></td>
-            <td className="py-3 pr-3 text-gray-600">{l.service_type==="building_management"?"Building":"Training"}</td>
+            <td className="py-3 pr-3 text-gray-600">{services.find(s=>s.slug===l.service_type)?.name || l.service_type}</td>
             <td className="py-3 pr-3 text-gray-600">{l.contact_role||"-"}</td>
             <td className="py-3 pr-3 text-xs text-gray-600">{l.whatsapp||l.email||"-"}</td>
             <td className="py-3"><span className="inline-flex rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-700">{l.status}</span></td>

@@ -3,14 +3,16 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, CardTitle } from "@/components/ui/Card";
 
+type Svc={slug:string;name:string};
 export default function LeadsPage() {
   const [leads, setLeads] = useState<any[]>([]);
   const [f, setF] = useState({ q:"", service_type:"", status:"" });
+  const [services,setServices]=useState<Svc[]>([]);
   async function load() {
     const r = await fetch("/api/leads").then(r=>r.json()).catch(()=>({leads:[]}));
     setLeads(r.leads||[]);
   }
-  useEffect(()=>{ load(); },[]);
+  useEffect(()=>{ load(); fetch("/api/services").then(r=>r.json()).then(d=>setServices(d.services||[])).catch(()=>{}); },[]);
   const filtered = leads.filter(l => {
     if (f.service_type && l.service_type !== f.service_type) return false;
     if (f.status && l.status !== f.status) return false;
@@ -29,7 +31,7 @@ export default function LeadsPage() {
         <CardTitle>Lead Database</CardTitle><span className="text-sm text-gray-500">{filtered.length}/{leads.length}</span>
         <div className="flex-1"/>
         <I placeholder="Cari company/kota/kontak..." value={f.q} onChange={(e:any)=>setF({...f,q:e.target.value})} className="w-64"/>
-        <S value={f.service_type} onChange={(e:any)=>setF({...f,service_type:e.target.value})}><option value="">All Service</option><option value="building_management">building_management</option><option value="office_training">office_training</option></S>
+        <S value={f.service_type} onChange={(e:any)=>setF({...f,service_type:e.target.value})}><option value="">All Service</option>{services.map(s=><option key={s.slug} value={s.slug}>{s.name}</option>)}</S>
         <S value={f.status} onChange={(e:any)=>setF({...f,status:e.target.value})}><option value="">All Status</option><option value="new">new</option><option value="sent_email">sent_email</option><option value="sent_wa">sent_wa</option><option value="sent_both">sent_both</option><option value="failed">failed</option><option value="do_not_contact">do_not_contact</option></S>
       </div>
       <div className="overflow-x-auto">

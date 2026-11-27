@@ -3,11 +3,13 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, CardTitle } from "@/components/ui/Card";
 
+type Svc={slug:string;name:string};
 export default function OutreachPage() {
   const [logs, setLogs] = useState<any[]>([]);
   const [runs, setRuns] = useState<any[]>([]);
   const [err, setErr] = useState("");
   const [f, setF] = useState({ q:"", channel:"", status:"", service_type:"" });
+  const [services,setServices]=useState<Svc[]>([]);
 
   async function load() {
     const qs = new URLSearchParams(Object.entries(f).filter(([,v])=>v) as any).toString();
@@ -17,7 +19,7 @@ export default function OutreachPage() {
     ]);
     setLogs(l.logs||[]); setRuns(r.runs||[]); setErr(l.error||"");
   }
-  useEffect(()=>{ load(); },[]);
+  useEffect(()=>{ load(); fetch("/api/services").then(r=>r.json()).then(d=>setServices(d.services||[])).catch(()=>{}); },[]);
 
   const I = (p:any)=> <input {...p} className={"rounded-lg border border-gray-300 px-3 py-2 text-sm "+(p.className||"")} />;
   const S = (p:any)=> <select {...p} className={"rounded-lg border border-gray-300 px-3 py-2 text-sm "+(p.className||"")} />;
@@ -42,7 +44,7 @@ export default function OutreachPage() {
         <I placeholder="Cari company/email/wa/kota" value={f.q} onChange={(e:any)=>setF({...f,q:e.target.value})} className="w-64"/>
         <S value={f.channel} onChange={(e:any)=>setF({...f,channel:e.target.value})}><option value="">All Channel</option><option value="email">Email</option><option value="whatsapp">WhatsApp</option></S>
         <S value={f.status} onChange={(e:any)=>setF({...f,status:e.target.value})}><option value="">All Status</option><option value="sent">sent</option><option value="failed">failed</option><option value="skipped">skipped</option></S>
-        <S value={f.service_type} onChange={(e:any)=>setF({...f,service_type:e.target.value})}><option value="">All Service</option><option value="building_management">building_management</option><option value="office_training">office_training</option></S>
+        <S value={f.service_type} onChange={(e:any)=>setF({...f,service_type:e.target.value})}><option value="">All Service</option>{services.map(s=><option key={s.slug} value={s.slug}>{s.name}</option>)}</S>
         <button onClick={load} className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white">Filter</button>
       </div>
       {err && <div className="mb-3 text-sm text-red-600">{err}</div>}

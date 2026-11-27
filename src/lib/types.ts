@@ -1,4 +1,14 @@
-export type ServiceType = "building_management" | "office_training";
+export type ServiceType = string;
+
+export interface ServiceDef {
+  id?: number;
+  slug: string;
+  name: string;
+  description?: string;
+  target_role?: string;
+  default_query?: string;
+  active?: number | boolean;
+}
 
 export interface LeadInput {
   service_type: ServiceType;

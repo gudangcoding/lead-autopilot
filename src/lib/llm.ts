@@ -5,7 +5,7 @@ export async function generateOutreach(lead: LeadInput) {
   const cfg = await getAiConfig();
   if (!cfg.apiKey) return fallback(lead);
   const prompt = `Buat pesan prospek singkat Bahasa Indonesia.
-Jasa: ${lead.service_type === "building_management" ? "aplikasi manajemen gedung/apartemen/P3SRS" : "training Microsoft Office/Excel untuk pabrik/perkantoran"}.
+Jasa: ${lead.service_type || "layanan"}.
 Perusahaan: ${lead.company_name}
 Kontak target: ${lead.contact_role || "Pengadaan/GA/HRD"}
 Kota: ${lead.city || "-"}
@@ -39,13 +39,11 @@ export async function testAiConnection() {
 }
 
 function defaultSubject(lead: LeadInput) {
-  return lead.service_type === "building_management"
-    ? `Solusi Manajemen Gedung untuk ${lead.company_name}`
-    : `Training Microsoft Office/Excel untuk ${lead.company_name}`;
+  return `Penawaran ${lead.service_type || "Layanan"} untuk ${lead.company_name}`;
 }
 
 function fallback(lead: LeadInput) {
-  const service = lead.service_type === "building_management" ? "aplikasi manajemen gedung/apartemen" : "training Microsoft Office/Excel";
+  const service = lead.service_type || "layanan kami";
   const subject = defaultSubject(lead);
   const email = `Yth. Tim ${lead.contact_role || "Pengadaan/GA/HRD"} ${lead.company_name},\n\nPerkenalkan, kami menyediakan ${service} yang dapat membantu operasional harian menjadi lebih rapi dan efisien. Kami ingin menawarkan sesi perkenalan singkat 15-20 menit untuk memahami kebutuhan ${lead.company_name}${lead.city ? ` di ${lead.city}` : ""} dan menyiapkan proposal yang sesuai.\n\nJika berkenan, mohon informasikan waktu yang nyaman untuk kami hubungi lebih lanjut.\n\nHormat kami,\nTim Sales`;
   const whatsapp = `Halo Tim ${lead.contact_role || "Pengadaan/GA/HRD"} ${lead.company_name}, kami menawarkan ${service}. Boleh kami jadwalkan perkenalan singkat 15 menit untuk bahas kebutuhan Anda? Terima kasih.`;

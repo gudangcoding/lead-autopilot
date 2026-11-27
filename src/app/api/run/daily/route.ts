@@ -6,9 +6,9 @@ import { sendEmail } from "@/lib/email";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { getSession } from "@/lib/auth";
 import { getWaConfig } from "@/lib/settings";
-import type { ServiceType } from "@/lib/types";
+import { listServices } from "@/lib/services";
 
-const SERVICES: ServiceType[] = ["building_management", "office_training"];
+
 
 export async function POST(req: NextRequest) {
   const secret = req.headers.get("x-cron-secret");
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const waCfg = await getWaConfig().catch(()=>({dailyLimit:10,messageDelayMs:3000}));
   const limit = Math.max(1, Math.min(50, Number(body.limit || waCfg.dailyLimit || 10)));
-  const services = (body.service_type ? [body.service_type] : SERVICES) as ServiceType[];
+  const services = body.service_type ? [String(body.service_type)] : (await listServices()).filter(s=>s.active!==0 && s.active!==false).map(s=>s.slug);
   const pool = getPool();
   const summary: any[] = [];
 

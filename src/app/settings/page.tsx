@@ -9,6 +9,7 @@ type Wa = { dryRun:boolean; dailyLimit:number; workerUrl:string; messageDelayMs:
 type Imap = { host:string; port:number; secure:boolean; user:string; pass:string; mailbox:string; pollIntervalSec:number; enabled:boolean; hasPass?:boolean };
 type MAI = { autoReplyEmail:boolean; autoReplyWa:boolean; followupHours:number; maxRepliesPerLead:number; systemPrompt:string };
 type User = { email:string; name:string };
+type Svc = { slug:string; name:string; description?:string; target_role?:string; default_query?:string; active?:number|boolean };
 
 export default function SettingsPage() {
   const [smtp,setSmtp]=useState<Smtp>({host:"",port:587,secure:false,user:"",pass:"",from:""});
@@ -17,14 +18,17 @@ export default function SettingsPage() {
   const [imap,setImap]=useState<Imap>({host:"",port:993,secure:true,user:"",pass:"",mailbox:"INBOX",pollIntervalSec:60,enabled:false});
   const [mai,setMai]=useState<MAI>({autoReplyEmail:false,autoReplyWa:false,followupHours:48,maxRepliesPerLead:5,systemPrompt:""});
   const [user,setUser]=useState<User>({email:"",name:""});
+  const [services,setServices]=useState<Svc[]>([]);
+  const [newSvc,setNewSvc]=useState({name:"",target_role:"",default_query:""});
   const [pw,setPw]=useState({currentPassword:"",newPassword:""});
   const [msg,setMsg]=useState(""); const [busy,setBusy]=useState("");
   const [waStatus,setWaStatus]=useState<any>(null);
 
   async function load(){
-    const [s,u]=await Promise.all([fetch("/api/settings").then(r=>r.json()), fetch("/api/auth/me").then(r=>r.json()).catch(()=>({}))]);
+    const [s,u,sv]=await Promise.all([fetch("/api/settings").then(r=>r.json()), fetch("/api/auth/me").then(r=>r.json()).catch(()=>({})), fetch("/api/services").then(r=>r.json()).catch(()=>({services:[]}))]);
     if(s.smtp) setSmtp(s.smtp); if(s.ai) setAi(s.ai); if(s.wa_blast) setWa(s.wa_blast); if(s.imap) setImap(s.imap); if(s.marketing_ai) setMai(s.marketing_ai);
     if(u.user) setUser(u.user);
+    if(sv.services) setServices(sv.services);
   }
   useEffect(()=>{ load(); fetch("/api/settings/test-wa").then(r=>r.json()).then(setWaStatus).catch(()=>{}); },[]);
 
@@ -105,6 +109,18 @@ export default function SettingsPage() {
           <div><L c="System prompt"/><textarea value={mai.systemPrompt} onChange={(e:any)=>setMai({...mai,systemPrompt:e.target.value})} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm min-h-[96px]"/></div>
         </div>
         <div className="mt-4"><B onClick={()=>save("marketing_ai",mai)}>Simpan Marketing AI</B></div>
+      </Card>
+
+      <Card>
+        <CardTitle>Jasa / Layanan</CardTitle>
+        <div className="mt-4 space-y-3">
+          <div className="grid grid-cols-1 gap-2">{services.map(s=><div key={s.slug} className="rounded-lg border border-gray-200 p-3 text-sm"><div className="font-medium text-gray-900">{s.name}</div><div className="text-xs text-gray-500">{s.slug}{s.target_role?` • ${s.target_role}`:""}</div></div>)}</div>
+          <hr className="border-gray-100"/>
+          <div><L c="Nama jasa baru"/><I value={newSvc.name} onChange={(e:any)=>setNewSvc({...newSvc,name:e.target.value})} placeholder="Contoh: Cleaning Service"/></div>
+          <div><L c="Target role"/><I value={newSvc.target_role} onChange={(e:any)=>setNewSvc({...newSvc,target_role:e.target.value})} placeholder="Purchasing / GA"/></div>
+          <div><L c="Default query discover"/><I value={newSvc.default_query} onChange={(e:any)=>setNewSvc({...newSvc,default_query:e.target.value})} placeholder="kata kunci Google Maps"/></div>
+          <div><B onClick={async()=>{if(!newSvc.name.trim())return; setBusy("svc"); await fetch("/api/services",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(newSvc)}); setNewSvc({name:"",target_role:"",default_query:""}); await load(); setBusy(""); setMsg("Jasa tersimpan");}}>Tambah Jasa</B></div>
+        </div>
       </Card>
 
       <Card>

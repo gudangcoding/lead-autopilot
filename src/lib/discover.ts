@@ -1,12 +1,12 @@
-import type { LeadInput, ServiceType } from "./types";
+import type { LeadInput } from "./types";
 
 export interface DiscoverProvider {
-  discover(query: string, limit: number, serviceType: ServiceType): Promise<LeadInput[]>;
+  discover(query: string, limit: number, serviceType: string): Promise<LeadInput[]>;
 }
 
 export class SerpApiProvider implements DiscoverProvider {
   constructor(private apiKey: string) {}
-  async discover(query: string, limit: number, serviceType: ServiceType): Promise<LeadInput[]> {
+  async discover(query: string, limit: number, serviceType: string): Promise<LeadInput[]> {
     const url = new URL("https://serpapi.com/search.json");
     url.searchParams.set("engine", "google_maps");
     url.searchParams.set("q", query);
@@ -22,7 +22,7 @@ export class SerpApiProvider implements DiscoverProvider {
     return items.map((r: any) => ({
       service_type: serviceType,
       company_name: String(r.title || "").trim(),
-      contact_role: serviceType === "building_management" ? "Pengadaan / GA / Building Management" : "GA / HRD / Training / Purchasing",
+      contact_role: "Pengadaan / GA / Decision Maker",
       address: r.address || r.address_line || undefined,
       city: extractCity(r.address),
       website: r.website || undefined,
@@ -45,7 +45,7 @@ export function getDiscoverProvider(): DiscoverProvider {
   throw new Error("No discover provider configured. Set SERPAPI_KEY for Google Maps discovery, or import CSV/XLSX.");
 }
 
-export async function discoverLeads(serviceType: ServiceType, query: string, limit = 10) {
+export async function discoverLeads(serviceType: string, query: string, limit = 10) {
   const provider = getDiscoverProvider();
   return provider.discover(query, limit, serviceType);
 }

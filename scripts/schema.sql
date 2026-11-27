@@ -13,9 +13,20 @@ CREATE TABLE IF NOT EXISTS app_settings (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS services (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  slug VARCHAR(64) NOT NULL UNIQUE,
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  target_role VARCHAR(255),
+  default_query VARCHAR(255),
+  active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS leads (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  service_type ENUM('building_management','office_training') NOT NULL,
+  service_type VARCHAR(64) NOT NULL,
   company_name VARCHAR(255) NOT NULL,
   contact_role VARCHAR(128),
   contact_name VARCHAR(255),
@@ -34,7 +45,7 @@ CREATE TABLE IF NOT EXISTS leads (
 
 CREATE TABLE IF NOT EXISTS campaigns (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  service_type ENUM('building_management','office_training') NOT NULL,
+  service_type VARCHAR(64) NOT NULL,
   name VARCHAR(255) NOT NULL,
   email_subject VARCHAR(255) NOT NULL,
   email_template TEXT NOT NULL,
@@ -59,7 +70,7 @@ CREATE TABLE IF NOT EXISTS outreach_logs (
 CREATE TABLE IF NOT EXISTS daily_runs (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   run_date DATE NOT NULL,
-  service_type ENUM('building_management','office_training') NOT NULL,
+  service_type VARCHAR(64) NOT NULL,
   selected_count INT NOT NULL DEFAULT 0,
   email_sent INT NOT NULL DEFAULT 0,
   wa_sent INT NOT NULL DEFAULT 0,

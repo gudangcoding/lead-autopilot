@@ -34,6 +34,11 @@ async function main() {
     console.log("seeded user", seedEmail);
   }
 
+  // migrate legacy enum service_type to varchar for custom services
+  for (const tbl of ["leads","campaigns","daily_runs"]) {
+    try { await conn.query(`ALTER TABLE \`${tbl}\` MODIFY service_type VARCHAR(64) NOT NULL`); } catch {}
+  }
+
   const defaults: [string, any][] = [
     ["smtp", { host: process.env.SMTP_HOST || "", port: Number(process.env.SMTP_PORT || 587), secure: String(process.env.SMTP_SECURE) === "true", user: process.env.SMTP_USER || "", pass: process.env.SMTP_PASS || "", from: process.env.SMTP_FROM || "" }],
     ["ai", { provider: "hcnsec", baseUrl: process.env.HCNSEC_BASE_URL || "https://api.hcnsec.cn/v1", apiKey: process.env.HCNSEC_API_KEY || "", model: process.env.HCNSEC_MODEL || "DeepSeek-V4-Pro" }],
@@ -43,6 +48,14 @@ async function main() {
   ];
   for (const [key, value] of defaults) {
     await conn.query("INSERT IGNORE INTO app_settings (`key`, value_json) VALUES (?, ?)", [key, JSON.stringify(value)]);
+  }
+
+  const services = [
+    ["building_management","Building Management / P3SRS","Aplikasi manajemen gedung/apartemen/P3SRS/PPPSRS","Pengadaan / Bendahara / GA","pengelola gedung apartemen P3SRS Jakarta"],
+    ["office_training","Training MS Office/Excel","Training Microsoft Office/Excel untuk pabrik/perkantoran","GA / HRD / Training / Purchasing","pabrik kawasan industri MM2100 Cikarang Bekasi"],
+  ];
+  for (const [slug,name,description,target_role,default_query] of services) {
+    await conn.query("INSERT IGNORE INTO services (slug,name,description,target_role,default_query,active) VALUES (?,?,?,?,?,1)", [slug,name,description,target_role,default_query]);
   }
 
   await conn.end();

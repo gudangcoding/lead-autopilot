@@ -7,12 +7,13 @@ import { sendEmail } from "../src/lib/email";
 import { sendWhatsApp } from "../src/lib/whatsapp";
 import { getWaConfig } from "../src/lib/settings";
 
-const SERVICES = ["building_management","office_training"] as const;
+import { listServices } from "../src/lib/services";
 
 async function runDaily() {
   const pool = getPool();
   const waCfg = await getWaConfig().catch(()=>({dailyLimit:10,messageDelayMs:3000}));
-  for (const service of SERVICES) {
+  const services = (await listServices()).filter(s=>s.active!==0 && s.active!==false).map(s=>s.slug);
+  for (const service of services) {
     const runDate = new Date().toISOString().slice(0,10);
     await pool.query(`INSERT INTO daily_runs (run_date,service_type,status) VALUES (?,?, 'running') ON DUPLICATE KEY UPDATE status='running', error=NULL`, [runDate, service]).catch(()=>{});
     let emailSent=0, waSent=0, selected=0;
