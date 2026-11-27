@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card, CardTitle } from "@/components/ui/Card";
+import { ServiceModal } from "@/components/ServiceModal";
 
 type Smtp = { host:string; port:number; secure:boolean; user:string; pass:string; from:string; hasPass?:boolean };
 type Ai = { baseUrl:string; apiKey:string; model:string; hasApiKey?:boolean };
@@ -20,7 +21,7 @@ export default function SettingsPage() {
   const [mai,setMai]=useState<MAI>({autoReplyEmail:false,autoReplyWa:false,followupHours:48,maxRepliesPerLead:5,systemPrompt:""});
   const [user,setUser]=useState<User>({email:"",name:""});
   const [services,setServices]=useState<Svc[]>([]);
-  const [newSvc,setNewSvc]=useState({name:"",target_role:"",default_query:""});
+  const [svcModal,setSvcModal]=useState<{open:boolean; initial?:any}>({open:false});
   const [discover,setDiscover]=useState<Discover>({serpApiKey:""});
   const [pw,setPw]=useState({currentPassword:"",newPassword:""});
   const [msg,setMsg]=useState(""); const [busy,setBusy]=useState("");
@@ -123,15 +124,9 @@ export default function SettingsPage() {
       </Card>
 
       <Card>
-        <CardTitle>Jasa / Layanan</CardTitle>
-        <div className="mt-4 space-y-3">
-          <div className="grid grid-cols-1 gap-2">{services.map(s=><div key={s.slug} className="rounded-lg border border-gray-200 p-3 text-sm"><div className="font-medium text-gray-900">{s.name}</div><div className="text-xs text-gray-500">{s.slug}{s.target_role?` • ${s.target_role}`:""}</div></div>)}</div>
-          <hr className="border-gray-100"/>
-          <div><L c="Nama jasa baru"/><I value={newSvc.name} onChange={(e:any)=>setNewSvc({...newSvc,name:e.target.value})} placeholder="Contoh: Cleaning Service"/></div>
-          <div><L c="Target role"/><I value={newSvc.target_role} onChange={(e:any)=>setNewSvc({...newSvc,target_role:e.target.value})} placeholder="Purchasing / GA"/></div>
-          <div><L c="Default query discover"/><I value={newSvc.default_query} onChange={(e:any)=>setNewSvc({...newSvc,default_query:e.target.value})} placeholder="kata kunci Google Maps"/></div>
-          <div><B onClick={async()=>{if(!newSvc.name.trim())return; setBusy("svc"); await fetch("/api/services",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(newSvc)}); setNewSvc({name:"",target_role:"",default_query:""}); await load(); setBusy(""); setMsg("Jasa tersimpan");}}>Tambah Jasa</B></div>
-        </div>
+        <div className="flex items-center justify-between"><CardTitle>Jasa / Layanan</CardTitle><button onClick={()=>setSvcModal({open:true,initial:null})} className="rounded-lg bg-brand-500 px-3 py-2 text-sm font-medium text-white">+ Tambah Jasa</button></div>
+        <div className="mt-4 grid grid-cols-1 gap-2">{services.map(s=><div key={s.slug} className="flex items-center justify-between rounded-lg border border-gray-200 p-3 text-sm"><div><div className="font-medium text-gray-900">{s.name}</div><div className="text-xs text-gray-500">{s.slug}{s.target_role?` • ${s.target_role}`:""}</div></div><button onClick={()=>setSvcModal({open:true,initial:s})} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs hover:bg-gray-50">Edit</button></div>)}</div>
+        <ServiceModal open={svcModal.open} initial={svcModal.initial} onClose={()=>setSvcModal({open:false})} onSaved={()=>{load();}} />
       </Card>
 
       <Card>

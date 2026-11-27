@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 export const dynamic = "force-dynamic";
 import { Card, CardTitle } from "@/components/ui/Card";
-import { Building2, GraduationCap, Send, MessageSquare, Mail, Search } from "lucide-react";
+import { Building2, GraduationCap, Send, MessageSquare, Mail, Search, Plus, Pencil } from "lucide-react";
+import { ServiceModal } from "@/components/ServiceModal";
 
 type Lead = { id:number; service_type:string; company_name:string; contact_role?:string; city?:string; whatsapp?:string; email?:string; status:string };
 type Svc = { slug:string; name:string; active?:number|boolean };
@@ -12,7 +13,7 @@ export default function Page() {
   const [file, setFile] = useState<File|null>(null);
   const [services, setServices] = useState<Svc[]>([]);
   const [service, setService] = useState("");
-  const [newSvc, setNewSvc] = useState("");
+  const [svcModal, setSvcModal] = useState<{open:boolean; initial?:any}>({open:false});
   const [msg, setMsg] = useState("");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [wa, setWa] = useState<any>(null);
@@ -60,10 +61,13 @@ export default function Page() {
         <div className="grid gap-4 md:grid-cols-2">
           <div>
             <label className="mb-1.5 block text-sm font-medium text-gray-700">Jasa</label>
-            <select value={service} onChange={e=>setService(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm">
-              {services.map(s=><option key={s.slug} value={s.slug}>{s.name}</option>)}
-            </select>
-            <div className="mt-2 flex gap-2"><input value={newSvc} onChange={e=>setNewSvc(e.target.value)} placeholder="Tambah jasa custom..." className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"/><button onClick={async()=>{if(!newSvc.trim())return; setBusy(true); await fetch('/api/services',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:newSvc.trim()})}); setNewSvc(''); await refresh(); setBusy(false);}} className="rounded-lg bg-gray-100 px-3 py-2 text-sm font-medium">Tambah</button></div>
+            <div className="flex gap-2">
+              <select value={service} onChange={e=>setService(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm">
+                {services.map(s=><option key={s.slug} value={s.slug}>{s.name}</option>)}
+              </select>
+              <button title="Edit jasa terpilih" onClick={()=>setSvcModal({open:true, initial: services.find(s=>s.slug===service)||null})} className="rounded-lg border border-gray-300 px-3 hover:bg-gray-50"><Pencil size={16}/></button>
+              <button title="Tambah jasa" onClick={()=>setSvcModal({open:true, initial:null})} className="rounded-lg border border-gray-300 px-3 hover:bg-gray-50"><Plus size={16}/></button>
+            </div>
           </div>
           <div className="flex items-end">
             <button disabled={busy} onClick={discover} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"><Search size={16}/>Auto Discover 10</button>
@@ -107,6 +111,7 @@ export default function Page() {
         </table>
       </div>
     </Card>
+    <ServiceModal open={svcModal.open} initial={svcModal.initial} onClose={()=>setSvcModal({open:false})} onSaved={()=>{ refresh(); }} />
   </AppShell>;
 }
 
