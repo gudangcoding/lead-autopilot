@@ -19,13 +19,14 @@ export default function SettingsPage() {
   const [user,setUser]=useState<User>({email:"",name:""});
   const [pw,setPw]=useState({currentPassword:"",newPassword:""});
   const [msg,setMsg]=useState(""); const [busy,setBusy]=useState("");
+  const [waStatus,setWaStatus]=useState<any>(null);
 
   async function load(){
     const [s,u]=await Promise.all([fetch("/api/settings").then(r=>r.json()), fetch("/api/auth/me").then(r=>r.json()).catch(()=>({}))]);
     if(s.smtp) setSmtp(s.smtp); if(s.ai) setAi(s.ai); if(s.wa_blast) setWa(s.wa_blast); if(s.imap) setImap(s.imap); if(s.marketing_ai) setMai(s.marketing_ai);
     if(u.user) setUser(u.user);
   }
-  useEffect(()=>{ load(); },[]);
+  useEffect(()=>{ load(); fetch("/api/settings/test-wa").then(r=>r.json()).then(setWaStatus).catch(()=>{}); },[]);
 
   async function save(key:string, body:any){ setBusy(key); setMsg(""); const r=await fetch("/api/settings",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({key,...body})}); const j=await r.json(); setBusy(""); setMsg(r.ok?`${key} tersimpan`: (j.error||"gagal")); if(r.ok) load(); }
   async function test(path:string, body?:any){ setBusy(path); setMsg(""); const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:body?JSON.stringify(body):undefined}); const j=await r.json(); setBusy(""); setMsg(JSON.stringify(j)); }
@@ -70,8 +71,12 @@ export default function SettingsPage() {
           <div><L c="Worker URL"/><I value={wa.workerUrl} onChange={(e:any)=>setWa({...wa,workerUrl:e.target.value})}/></div>
           <div><L c="Delay antar pesan (ms)"/><I type="number" value={wa.messageDelayMs} onChange={(e:any)=>setWa({...wa,messageDelayMs:Number(e.target.value)})}/></div>
         </div>
-        <div className="mt-4 flex gap-2"><B onClick={()=>save("wa_blast",wa)}>Simpan WA</B><B kind="ghost" onClick={async()=>{setBusy("wa"); const j=await fetch("/api/settings/test-wa").then(r=>r.json()); setBusy(""); setMsg(JSON.stringify(j));}}>Cek Status WA</B></div>
-        <p className="mt-3 text-xs text-gray-500">Jalankan <code>npm run worker:wa</code> dan scan QR untuk koneksi nyata.</p>
+        <div className="mt-4 flex gap-2"><B onClick={()=>save("wa_blast",wa)}>Simpan WA</B><B kind="ghost" onClick={async()=>{setBusy("wa"); const j=await fetch("/api/settings/test-wa").then(r=>r.json()); setWaStatus(j); setBusy(""); setMsg(j.ready?"WA ready":j.qr?"QR diterima, scan di bawah":"Status WA diperbarui");}}>Cek Status / QR</B></div>
+        {waStatus && <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4">
+          <div className="text-sm font-medium text-gray-900">Status: {waStatus.ready ? "Connected" : "Not Ready"} {waStatus.dryRun ? "(dry-run)" : ""}</div>
+          {waStatus.qrDataUrl ? <div className="mt-3"><img src={waStatus.qrDataUrl} alt="WA QR" className="rounded-lg border border-gray-200 bg-white p-2 w-[280px] h-[280px]"/><p className="mt-2 text-xs text-gray-500">Scan dari WhatsApp &gt; Linked Devices. QR refresh otomatis oleh worker.</p></div> : <p className="mt-2 text-xs text-gray-500">{waStatus.ready?"WhatsApp sudah terhubung.":"QR belum tersedia. Pastikan `lead-wa-worker` jalan di PM2/lokal."}</p>}
+        </div>}
+        <p className="mt-3 text-xs text-gray-500">Worker: <code>npm run worker:wa</code> / PM2 <code>lead-wa-worker</code>.</p>
       </Card>
 
       <Card>

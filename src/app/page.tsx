@@ -80,8 +80,9 @@ export default function Page() {
         <p className="text-sm text-gray-500 mt-1 mb-4">Pilih 10 lead baru per jasa, generate pesan, kirim email & WA.</p>
         <button disabled={busy} onClick={runNow} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-60"><Send size={16}/>Run Now</button>
         <div className="mt-4 rounded-xl bg-gray-50 p-4 text-xs text-gray-600 space-y-2">
-          <div className="flex items-center gap-2"><Mail size={14}/> SMTP: {process.env.NEXT_PUBLIC_SMTP?"configured":"set in .env.local"}</div>
-          <div className="flex items-center gap-2"><MessageSquare size={14}/> Baileys: {wa?.ready?"connected":"run worker:wa & scan QR"}</div>
+          <div className="flex items-center gap-2"><Mail size={14}/> SMTP: cek di Settings</div>
+          <div className="flex items-center gap-2"><MessageSquare size={14}/> Baileys: {wa?.ready?"connected":"not ready"}</div>
+          {wa?.qrDataUrl && <div className="pt-2"><img src={wa.qrDataUrl} alt="WA QR" className="w-36 h-36 rounded border bg-white p-1"/><div className="mt-1 text-[11px] text-gray-500">Scan QR di Settings/WA Linked Devices</div></div>}
         </div>
       </Card>
     </div>

@@ -1,3 +1,5 @@
+![Dashboard](dashboard.png)
+
 # Lead Autopilot
 
 Aplikasi internal untuk otomatisasi lead generation dan outreach B2B. Fokus 2 jasa:
