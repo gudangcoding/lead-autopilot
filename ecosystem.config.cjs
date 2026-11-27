@@ -1,0 +1,40 @@
+module.exports = {
+  apps: [
+    {
+      name: "lead-web",
+      cwd: __dirname,
+      script: "node_modules/next/dist/bin/next",
+      args: "start -p 3000",
+      env: { NODE_ENV: "production" },
+      autorestart: true,
+      max_restarts: 10,
+    },
+    {
+      name: "lead-wa-worker",
+      cwd: __dirname,
+      script: "node_modules/tsx/dist/cli.mjs",
+      args: "worker/baileys.ts",
+      env: { NODE_ENV: "production" },
+      autorestart: true,
+      max_restarts: 10,
+    },
+    {
+      name: "lead-imap-worker",
+      cwd: __dirname,
+      script: "node_modules/tsx/dist/cli.mjs",
+      args: "worker/imap.ts",
+      env: { NODE_ENV: "production" },
+      autorestart: true,
+      max_restarts: 10,
+    },
+    {
+      name: "lead-scheduler",
+      cwd: __dirname,
+      script: "node_modules/tsx/dist/cli.mjs",
+      args: "worker/scheduler.ts",
+      env: { NODE_ENV: "production" },
+      autorestart: true,
+      max_restarts: 10,
+    },
+  ],
+};

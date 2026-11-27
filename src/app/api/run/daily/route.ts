@@ -1,0 +1,70 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getPool } from "@/lib/db";
+import { pickDailyLeads } from "@/lib/leads";
+import { generateOutreach } from "@/lib/llm";
+import { sendEmail } from "@/lib/email";
+import { sendWhatsApp } from "@/lib/whatsapp";
+import { getSession } from "@/lib/auth";
+import { getWaConfig } from "@/lib/settings";
+import type { ServiceType } from "@/lib/types";
+
+const SERVICES: ServiceType[] = ["building_management", "office_training"];
+
+export async function POST(req: NextRequest) {
+  const secret = req.headers.get("x-cron-secret");
+  const session = await getSession();
+  const cronOk = process.env.CRON_SECRET && secret === process.env.CRON_SECRET;
+  if (!session && !cronOk) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const body = await req.json().catch(() => ({}));
+  const waCfg = await getWaConfig().catch(()=>({dailyLimit:10,messageDelayMs:3000}));
+  const limit = Math.max(1, Math.min(50, Number(body.limit || waCfg.dailyLimit || 10)));
+  const services = (body.service_type ? [body.service_type] : SERVICES) as ServiceType[];
+  const pool = getPool();
+  const summary: any[] = [];
+
+  for (const service of services) {
+    const runDate = new Date().toISOString().slice(0, 10);
+    await pool.query(
+      `INSERT INTO daily_runs (run_date,service_type,status) VALUES (?,?, 'running')
+       ON DUPLICATE KEY UPDATE status='running', error=NULL`, [runDate, service]
+    ).catch(() => {});
+    let emailSent = 0, waSent = 0, selected = 0, err: any = null;
+    try {
+      const leads = await pickDailyLeads(service, limit);
+      selected = leads.length;
+      for (const lead of leads) {
+        const msg = await generateOutreach(lead);
+        await new Promise(r=>setTimeout(r, Number((waCfg as any).messageDelayMs||0)));
+        let sentEmail = false, sentWa = false;
+        if (lead.email) {
+          try {
+            const id = await sendEmail(lead.email, msg.subject, msg.email);
+            await pool.query(`INSERT INTO outreach_logs (lead_id,channel,status,provider_message_id,payload) VALUES (?,?,?,?,?)`, [lead.id,'email','sent',id,JSON.stringify({subject:msg.subject})]);
+            sentEmail = true; emailSent++;
+          } catch (e:any) {
+            await pool.query(`INSERT INTO outreach_logs (lead_id,channel,status,error) VALUES (?,?, 'failed',?)`, [lead.id,'email',String(e.message||e)]);
+          }
+        }
+        if (lead.whatsapp) {
+          try {
+            const r: any = await sendWhatsApp(lead.whatsapp, msg.whatsapp);
+            await pool.query(`INSERT INTO outreach_logs (lead_id,channel,status,provider_message_id,payload) VALUES (?,?,?,?,?)`, [lead.id,'whatsapp',r?.skipped?'skipped':'sent',r?.id||null,JSON.stringify({text:msg.whatsapp})]);
+            if (!r?.skipped) { sentWa = true; waSent++; }
+          } catch (e:any) {
+            await pool.query(`INSERT INTO outreach_logs (lead_id,channel,status,error) VALUES (?,?, 'failed',?)`, [lead.id,'whatsapp',String(e.message||e)]);
+          }
+        }
+        const status = sentEmail && sentWa ? 'sent_both' : sentEmail ? 'sent_email' : sentWa ? 'sent_wa' : 'failed';
+        await pool.query(`UPDATE leads SET status=?, last_contacted_at=NOW() WHERE id=?`, [status, lead.id]);
+      }
+      await pool.query(`UPDATE daily_runs SET selected_count=?,email_sent=?,wa_sent=?,status='done' WHERE run_date=? AND service_type=?`, [selected,emailSent,waSent,runDate,service]);
+    } catch (e:any) {
+      err = String(e.message || e);
+      await pool.query(`UPDATE daily_runs SET status='failed', error=? WHERE run_date=? AND service_type=?`, [err, runDate, service]);
+    }
+    summary.push({ service, selected, emailSent, waSent, error: err });
+  }
+  return NextResponse.json({ ok: true, summary });
+}
