@@ -12,7 +12,7 @@ type MAI = { autoReplyEmail:boolean; autoReplyWa:boolean; followupHours:number; 
 type User = { email:string; name:string };
 type Svc = { slug:string; name:string; description?:string; target_role?:string; default_query?:string; active?:number|boolean };
 type K = { id?:number; service_slug?:string|null; title:string; url:string; notes?:string; };
-type Discover = { serpApiKey:string; hasKey?:boolean; provider?:string };
+type Discover = { serpApiKey:string; hasKey?:boolean; provider?:string; autoDiscover?:boolean; discoverLimitPerService?:number; defaultLocation?:string };
 
 export default function SettingsPage() {
   const [smtp,setSmtp]=useState<Smtp>({host:"",port:587,secure:false,user:"",pass:"",from:""});
@@ -23,7 +23,7 @@ export default function SettingsPage() {
   const [user,setUser]=useState<User>({email:"",name:""});
   const [services,setServices]=useState<Svc[]>([]);
   const [svcModal,setSvcModal]=useState<{open:boolean; initial?:any}>({open:false});
-  const [discover,setDiscover]=useState<Discover>({serpApiKey:""});
+  const [discover,setDiscover]=useState<Discover>({serpApiKey:"", autoDiscover:false, discoverLimitPerService:10, defaultLocation:"Indonesia"});
   const [knowledge,setKnowledge]=useState<K[]>([]);
   const [kForm,setKForm]=useState<K>({service_slug:"",title:"",url:"",notes:""});
   const [pw,setPw]=useState({currentPassword:"",newPassword:""});

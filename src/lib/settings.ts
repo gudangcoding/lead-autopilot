@@ -8,7 +8,7 @@ const DEFAULTS: Record<SettingKey, any> = {
   wa_blast: { dryRun: true, dailyLimit: 10, workerUrl: "http://127.0.0.1:3011", messageDelayMs: 3000 },
   imap: { host: "", port: 993, secure: true, user: "", pass: "", mailbox: "INBOX", pollIntervalSec: 60, enabled: false },
   marketing_ai: { autoReplyEmail: false, autoReplyWa: false, followupHours: 48, maxRepliesPerLead: 5, systemPrompt: "Kamu adalah asisten marketing profesional Indonesia. Balas singkat, sopan, membantu, dan fokus pada penjadwalan meeting/demo. Jangan mengarang fakta." },
-  discover: { serpApiKey: "", provider: "serpapi" },
+  discover: { serpApiKey: "", provider: "serpapi", autoDiscover: false, discoverLimitPerService: 10, defaultLocation: "Indonesia" },
 };
 
 export async function getSetting<T = any>(key: SettingKey): Promise<T> {
@@ -97,5 +97,8 @@ export async function getDiscoverConfig() {
   return {
     serpApiKey: db.serpApiKey || process.env.SERPAPI_KEY || "",
     provider: db.provider || "serpapi",
+    autoDiscover: !!db.autoDiscover,
+    discoverLimitPerService: Math.max(1, Math.min(50, Number(db.discoverLimitPerService || 10))),
+    defaultLocation: db.defaultLocation || "Indonesia",
   };
 }

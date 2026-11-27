@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPool } from "@/lib/db";
-import { pickDailyLeads } from "@/lib/leads";
+import { pickDailyLeads, upsertLeads } from "@/lib/leads";
 import { generateOutreach } from "@/lib/llm";
 import { sendEmail } from "@/lib/email";
 import { sendWhatsApp } from "@/lib/whatsapp";
 import { getSession } from "@/lib/auth";
-import { getWaConfig } from "@/lib/settings";
+import { getWaConfig, getDiscoverConfig } from "@/lib/settings";
+import { discoverLeads } from "@/lib/discover";
 import { listServices } from "@/lib/services";
 
 
@@ -19,19 +20,27 @@ export async function POST(req: NextRequest) {
   }
   const body = await req.json().catch(() => ({}));
   const waCfg = await getWaConfig().catch(()=>({dailyLimit:10,messageDelayMs:3000}));
+  const discoverCfg = await getDiscoverConfig().catch(()=>({autoDiscover:false,discoverLimitPerService:10,defaultLocation:"Indonesia"}));
   const limit = Math.max(1, Math.min(50, Number(body.limit || waCfg.dailyLimit || 10)));
-  const services = body.service_type ? [String(body.service_type)] : (await listServices()).filter(s=>s.active!==0 && s.active!==false).map(s=>s.slug);
+  const allServices = (await listServices()).filter(s=>s.active!==0 && s.active!==false);
+  const services = body.service_type ? allServices.filter(s=>s.slug===String(body.service_type)) : allServices;
   const pool = getPool();
   const summary: any[] = [];
 
-  for (const service of services) {
+  for (const svc of services) {
+    const service = svc.slug;
     const runDate = new Date().toISOString().slice(0, 10);
     await pool.query(
       `INSERT INTO daily_runs (run_date,service_type,status) VALUES (?,?, 'running')
        ON DUPLICATE KEY UPDATE status='running', error=NULL`, [runDate, service]
     ).catch(() => {});
-    let emailSent = 0, waSent = 0, selected = 0, err: any = null;
+    let emailSent = 0, waSent = 0, selected = 0, discovered = 0, err: any = null;
     try {
+      const shouldDiscover = body.discover === true || (body.discover !== false && discoverCfg.autoDiscover);
+      if (shouldDiscover && svc.default_query) {
+        const q = `${svc.default_query} ${discoverCfg.defaultLocation || ""}`.trim();
+        try { discovered = await upsertLeads(await discoverLeads(service, q, Number(body.discoverLimit || discoverCfg.discoverLimitPerService || 10))); } catch(e:any) { console.error("[daily] discover", service, e?.message||e); }
+      }
       const leads = await pickDailyLeads(service, limit);
       selected = leads.length;
       for (const lead of leads) {
@@ -64,7 +73,7 @@ export async function POST(req: NextRequest) {
       err = String(e.message || e);
       await pool.query(`UPDATE daily_runs SET status='failed', error=? WHERE run_date=? AND service_type=?`, [err, runDate, service]);
     }
-    summary.push({ service, selected, emailSent, waSent, error: err });
+    summary.push({ service, selected, discovered, emailSent, waSent, error: err });
   }
   return NextResponse.json({ ok: true, summary });
 }
