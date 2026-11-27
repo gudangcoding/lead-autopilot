@@ -11,6 +11,7 @@ type Imap = { host:string; port:number; secure:boolean; user:string; pass:string
 type MAI = { autoReplyEmail:boolean; autoReplyWa:boolean; followupHours:number; maxRepliesPerLead:number; systemPrompt:string };
 type User = { email:string; name:string };
 type Svc = { slug:string; name:string; description?:string; target_role?:string; default_query?:string; active?:number|boolean };
+type K = { id?:number; service_slug?:string|null; title:string; url:string; notes?:string; };
 type Discover = { serpApiKey:string; hasKey?:boolean; provider?:string };
 
 export default function SettingsPage() {
@@ -23,15 +24,18 @@ export default function SettingsPage() {
   const [services,setServices]=useState<Svc[]>([]);
   const [svcModal,setSvcModal]=useState<{open:boolean; initial?:any}>({open:false});
   const [discover,setDiscover]=useState<Discover>({serpApiKey:""});
+  const [knowledge,setKnowledge]=useState<K[]>([]);
+  const [kForm,setKForm]=useState<K>({service_slug:"",title:"",url:"",notes:""});
   const [pw,setPw]=useState({currentPassword:"",newPassword:""});
   const [msg,setMsg]=useState(""); const [busy,setBusy]=useState("");
   const [waStatus,setWaStatus]=useState<any>(null);
 
   async function load(){
-    const [s,u,sv]=await Promise.all([fetch("/api/settings").then(r=>r.json()), fetch("/api/auth/me").then(r=>r.json()).catch(()=>({})), fetch("/api/services").then(r=>r.json()).catch(()=>({services:[]}))]);
+    const [s,u,sv,kn]=await Promise.all([fetch("/api/settings").then(r=>r.json()), fetch("/api/auth/me").then(r=>r.json()).catch(()=>({})), fetch("/api/services").then(r=>r.json()).catch(()=>({services:[]})), fetch("/api/knowledge").then(r=>r.json()).catch(()=>({knowledge:[]}))]);
     if(s.smtp) setSmtp(s.smtp); if(s.ai) setAi(s.ai); if(s.wa_blast) setWa(s.wa_blast); if(s.imap) setImap(s.imap); if(s.marketing_ai) setMai(s.marketing_ai); if(s.discover) setDiscover(s.discover);
     if(u.user) setUser(u.user);
     if(sv.services) setServices(sv.services);
+    if(kn.knowledge) setKnowledge(kn.knowledge);
   }
   useEffect(()=>{ load(); fetch("/api/settings/test-wa").then(r=>r.json()).then(setWaStatus).catch(()=>{}); },[]);
 
@@ -112,6 +116,19 @@ export default function SettingsPage() {
           <div><L c="System prompt"/><textarea value={mai.systemPrompt} onChange={(e:any)=>setMai({...mai,systemPrompt:e.target.value})} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm min-h-[96px]"/></div>
         </div>
         <div className="mt-4"><B onClick={()=>save("marketing_ai",mai)}>Simpan Marketing AI</B></div>
+      </Card>
+
+      <Card className="xl:col-span-2">
+        <CardTitle>Sumber Pengetahuan AI</CardTitle>
+        <p className="mt-1 text-sm text-gray-500">Tambahkan website, Google Docs/Drive link publik, atau catatan produk. AI akan memakai ringkasan sumber yang relevan dengan jasa lead.</p>
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div><L c="Jasa"/><select value={kForm.service_slug||""} onChange={(e:any)=>setKForm({...kForm,service_slug:e.target.value})} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"><option value="">Semua jasa</option>{services.map(s=><option key={s.slug} value={s.slug}>{s.name}</option>)}</select></div>
+          <div><L c="Judul"/><I value={kForm.title} onChange={(e:any)=>setKForm({...kForm,title:e.target.value})} placeholder="Website / Demo / Dokumen"/></div>
+          <div className="md:col-span-2"><L c="URL"/><I value={kForm.url} onChange={(e:any)=>setKForm({...kForm,url:e.target.value})} placeholder="https://..."/></div>
+          <div className="md:col-span-2"><L c="Catatan"/><textarea value={kForm.notes||""} onChange={(e:any)=>setKForm({...kForm,notes:e.target.value})} className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm min-h-[70px]" placeholder="Info penting untuk AI"/></div>
+        </div>
+        <div className="mt-3"><B onClick={async()=>{if(!kForm.title||!kForm.url) return setMsg('Judul dan URL wajib'); setBusy('k'); const r=await fetch('/api/knowledge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(kForm)}); const j=await r.json(); setBusy(''); if(!r.ok) return setMsg(j.error||'Gagal'); setKForm({service_slug:'',title:'',url:'',notes:''}); load(); setMsg('Sumber pengetahuan tersimpan');}}>Tambah Sumber</B></div>
+        <div className="mt-4 space-y-2">{knowledge.map(k=><div key={k.id} className="flex items-start justify-between gap-3 rounded-lg border border-gray-200 p-3 text-sm"><div><div className="font-medium text-gray-900">{k.title} <span className="text-xs text-gray-500">({k.service_slug||'all'})</span></div><a href={k.url} target="_blank" rel="noreferrer" className="text-brand-600 break-all">{k.url}</a>{k.notes && <div className="text-xs text-gray-500 mt-1">{k.notes}</div>}</div><button onClick={async()=>{await fetch(`/api/knowledge?id=${k.id}`,{method:'DELETE'}); load();}} className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs hover:bg-gray-50">Hapus</button></div>)}</div>
       </Card>
 
       <Card>

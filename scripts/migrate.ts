@@ -58,6 +58,15 @@ async function main() {
     await conn.query("INSERT IGNORE INTO services (slug,name,description,target_role,default_query,active) VALUES (?,?,?,?,?,1)", [slug,name,description,target_role,default_query]);
   }
 
+  const knowledge = [
+    ["building_management","Website SistemGedung","https://www.sistemgedung.com","Website produk aplikasi manajemen gedung/apartemen/P3SRS"],
+    ["building_management","Demo Admin Panel BMS","https://bms.gudangcoding.my.id","Demo admin panel aplikasi building management"],
+    ["office_training","Website LKP Naura","https://lkpnaura.com","Website kursus komputer / training MS Office/Excel"],
+  ];
+  for (const [service_slug,title,url,notes] of knowledge) {
+    await conn.query("INSERT INTO knowledge_sources (service_slug,title,url,notes,active) SELECT ?,?,?,?,1 WHERE NOT EXISTS (SELECT 1 FROM knowledge_sources WHERE url=?)", [service_slug,title,url,notes,url]);
+  }
+
   await conn.end();
   console.log("migrated", db);
 }

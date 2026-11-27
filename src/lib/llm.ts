@@ -1,14 +1,18 @@
 import type { LeadInput } from "./types";
 import { getAiConfig, getMarketingAiConfig } from "./settings";
+import { getKnowledgeContext } from "./knowledge";
 
 export async function generateOutreach(lead: LeadInput) {
   const cfg = await getAiConfig();
+  const knowledge = await getKnowledgeContext(lead.service_type).catch(()=>"");
   if (!cfg.apiKey) return fallback(lead);
   const prompt = `Buat pesan prospek singkat Bahasa Indonesia.
 Jasa: ${lead.service_type || "layanan"}.
 Perusahaan: ${lead.company_name}
 Kontak target: ${lead.contact_role || "Pengadaan/GA/HRD"}
 Kota: ${lead.city || "-"}
+Sumber pengetahuan (gunakan hanya jika relevan, jangan mengarang):
+${knowledge || "-"}
 Kembalikan JSON valid: {"subject":"...","email":"...","whatsapp":"..."}. Email 80-140 kata, WA <= 500 karakter, sopan, ada CTA singkat, jangan mengarang fakta.`;
   const res = await fetch(`${cfg.baseUrl.replace(/\/$/, "")}/chat/completions`, {
     method: "POST",
@@ -54,9 +58,10 @@ function fallback(lead: LeadInput) {
 export async function generateReply(args: { lead: any; inbound: string; history?: {direction:string;body:string}[] }) {
   const ai = await getAiConfig();
   const m = await getMarketingAiConfig();
+  const knowledge = await getKnowledgeContext(args.lead?.service_type).catch(() => "");
   if (!ai.apiKey) return fallbackReply(args.lead, args.inbound);
   const hist = (args.history || []).map((h) => `${h.direction}: ${h.body}`).join("\n").slice(0, 3000);
-  const prompt = `Balas pesan masuk prospek.\nPerusahaan: ${args.lead.company_name || "-"}\nJasa: ${args.lead.service_type || "-"}\nKota: ${args.lead.city || "-"}\nRiwayat:\n${hist}\nPesan masuk:\n${args.inbound}\n\nTulis balasan saja dalam Bahasa Indonesia, singkat, sopan, bantu jawab, dan tawarkan langkah lanjut (call/demo/jadwal). Jangan mengarang fakta.`;
+  const prompt = `Balas pesan masuk prospek.\nPerusahaan: ${args.lead.company_name || "-"}\nJasa: ${args.lead.service_type || "-"}\nKota: ${args.lead.city || "-"}\nSumber pengetahuan (gunakan hanya jika relevan, jangan mengarang):\n${knowledge || "-"}\nRiwayat:\n${hist}\nPesan masuk:\n${args.inbound}\n\nTulis balasan saja dalam Bahasa Indonesia, singkat, sopan, bantu jawab, dan tawarkan langkah lanjut (call/demo/jadwal). Jangan mengarang fakta.`;
   const res = await fetch(`${ai.baseUrl.replace(/\/$/, "")}/chat/completions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${ai.apiKey}`, "Content-Type": "application/json" },
